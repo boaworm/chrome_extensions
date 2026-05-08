@@ -1,6 +1,8 @@
 /* BBC */
 [data-component="sign-in-wall"],
 #sign-in-prompt,
-.sign-in-prompt {
+.sign-in-prompt,
+#subscription-banner,
+#subliminal-banner {
   display: none !important;
 }

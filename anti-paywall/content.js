@@ -6,6 +6,8 @@ const SITE_CONFIGS = {
       '.sign-in-prompt',
       '.tp-modal',
       '.tp-backdrop',
+      '#subscription-banner',
+      '#subliminal-banner',
     ],
     fixBodyScroll: true,
   },
