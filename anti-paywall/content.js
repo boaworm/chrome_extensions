@@ -1,4 +1,10 @@
 const SITE_CONFIGS = {
+  'reuters.com': {
+    overlaySelectors: [
+      '[data-testid="Modal"]',
+    ],
+    fixBodyScroll: true,
+  },
   'cnn.com': {
     overlaySelectors: [
       '.user-account-reg-wall__overlay',

@@ -6,13 +6,15 @@
   "permissions": ["storage"],
   "host_permissions": [
     "https://*.bbc.com/*",
-    "https://*.cnn.com/*"
+    "https://*.cnn.com/*",
+    "https://*.reuters.com/*"
   ],
   "content_scripts": [
     {
       "matches": [
         "https://*.bbc.com/*",
-        "https://*.cnn.com/*"
+        "https://*.cnn.com/*",
+        "https://*.reuters.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],
