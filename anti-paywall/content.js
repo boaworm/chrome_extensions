@@ -1,4 +1,11 @@
 const SITE_CONFIGS = {
+  'cnn.com': {
+    overlaySelectors: [
+      '.user-account-reg-wall__overlay',
+      '.user-account-reg-wall__modal',
+    ],
+    fixBodyScroll: true,
+  },
   'bbc.com': {
     overlaySelectors: [
       '[data-component="sign-in-wall"]',

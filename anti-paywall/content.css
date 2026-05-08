@@ -1,3 +1,9 @@
+/* CNN */
+.user-account-reg-wall__overlay,
+.user-account-reg-wall__modal {
+  display: none !important;
+}
+
 /* BBC */
 [data-component="sign-in-wall"],
 #sign-in-prompt,

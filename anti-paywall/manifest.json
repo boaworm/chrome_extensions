@@ -5,12 +5,14 @@
   "description": "Remove sign-up and paywall overlays on news sites.",
   "permissions": ["storage"],
   "host_permissions": [
-    "https://*.bbc.com/*"
+    "https://*.bbc.com/*",
+    "https://*.cnn.com/*"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://*.bbc.com/*"
+        "https://*.bbc.com/*",
+        "https://*.cnn.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],
