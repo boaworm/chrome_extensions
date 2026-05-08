@@ -1,0 +1,66 @@
+/* Overlay on thumbnail cards (feed, search, sidebar) */
+.ycf-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  z-index: 100;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.ycf-overlay .ycf-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.ycf-overlay .ycf-reasons {
+  font-size: 9px;
+  font-weight: 400;
+  opacity: 0.75;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Overlay on the main video player on watch pages */
+#ycf-player-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 9999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+#ycf-player-overlay span {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+#ycf-player-overlay button {
+  padding: 10px 24px;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+#ycf-player-overlay button:hover {
+  border-color: #fff;
+  color: #fff;
+}
