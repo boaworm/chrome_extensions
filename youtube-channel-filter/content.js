@@ -5,6 +5,7 @@ const PLAYER_OVERLAY_ID = 'ycf-player-overlay';
 let subThreshold = 10000;
 let viewThreshold = 50000;
 let removeShorts = true;
+let watchPageDismissed = false;
 
 async function loadSettings() {
   const r = await chrome.storage.sync.get({ subThreshold: 10000, viewThreshold: 50000, removeShorts: true });
@@ -133,26 +134,30 @@ function removeCardOverlay(thumbnail) {
 }
 
 function applyPlayerOverlay(failingReasons) {
+  const reasonsText = failingReasons.join('\n');
   let el = document.getElementById(PLAYER_OVERLAY_ID);
-  if (!el) {
-    const player = document.querySelector('#movie_player');
-    if (!player) return;
-    if (getComputedStyle(player).position === 'static') player.style.position = 'relative';
-    el = document.createElement('div');
-    el.id = PLAYER_OVERLAY_ID;
-    const label = document.createElement('span');
-    label.textContent = 'Likely garbage';
-    const reasonsEl = document.createElement('div');
-    reasonsEl.style.cssText = 'font-size:14px;opacity:0.7;text-align:center;line-height:1.8;white-space:pre';
-    const btn = document.createElement('button');
-    btn.textContent = 'Watch anyway';
-    btn.addEventListener('click', () => el.remove());
-    el.appendChild(label);
-    el.appendChild(reasonsEl);
-    el.appendChild(btn);
-    player.appendChild(el);
+  if (el) {
+    const reasonsEl = el.querySelector('div');
+    if (reasonsEl.textContent !== reasonsText) reasonsEl.textContent = reasonsText;
+    return;
   }
-  el.querySelector('div').textContent = failingReasons.join('\n');
+  const player = document.querySelector('#movie_player');
+  if (!player) return;
+  if (getComputedStyle(player).position === 'static') player.style.position = 'relative';
+  el = document.createElement('div');
+  el.id = PLAYER_OVERLAY_ID;
+  const label = document.createElement('span');
+  label.textContent = 'Likely garbage';
+  const reasonsEl = document.createElement('div');
+  reasonsEl.style.cssText = 'font-size:14px;opacity:0.7;text-align:center;line-height:1.8;white-space:pre';
+  const btn = document.createElement('button');
+  btn.textContent = 'Watch anyway';
+  btn.addEventListener('click', () => { watchPageDismissed = true; el.remove(); });
+  el.appendChild(label);
+  el.appendChild(reasonsEl);
+  el.appendChild(btn);
+  reasonsEl.textContent = reasonsText;
+  player.appendChild(el);
 }
 
 function removePlayerOverlay() {
@@ -182,8 +187,10 @@ async function processCard(card) {
 
   const viewCount = getViewCountFromCard(card);
   const failing = [];
-  if (viewCount !== null && viewCount < viewThreshold) failing.push('Too few views');
-  if (subCount !== null && subCount < subThreshold) failing.push('Too few subscribers');
+  const viewsFailing = viewCount !== null && viewCount < viewThreshold;
+  const subsFailing = subCount !== null && subCount < subThreshold;
+  if (viewsFailing && subsFailing) { failing.push('Too few views'); failing.push('Too few subscribers'); }
+  else if (subsFailing) failing.push('Too few subscribers');
 
   console.log(`[YCF] card views=${viewCount} subs=${subCount} failing=${failing}`);
 
@@ -199,6 +206,7 @@ async function processCard(card) {
 
 async function processWatchPage() {
   if (window.location.pathname !== '/watch') { removePlayerOverlay(); return; }
+  if (watchPageDismissed) return;
 
   let channelLink = null;
   for (const sel of WATCH_CHANNEL_SELECTORS) {
@@ -220,8 +228,10 @@ async function processWatchPage() {
 
   const viewCount = getWatchPageViewCount();
   const failing = [];
-  if (viewCount !== null && viewCount < viewThreshold) failing.push('Too few views');
-  if (subCount !== null && subCount < subThreshold) failing.push('Too few subscribers');
+  const viewsFailing = viewCount !== null && viewCount < viewThreshold;
+  const subsFailing = subCount !== null && subCount < subThreshold;
+  if (viewsFailing && subsFailing) { failing.push('Too few views'); failing.push('Too few subscribers'); }
+  else if (subsFailing) failing.push('Too few subscribers');
 
   console.log(`[YCF] watch views=${viewCount} subs=${subCount} failing=${failing}`);
 
@@ -253,6 +263,7 @@ function resetAndProcess() {
 window.addEventListener('yt-page-data-updated', resetAndProcess);
 
 window.addEventListener('yt-navigate-finish', async () => {
+  watchPageDismissed = false;
   await loadSettings();
   resetAndProcess();
   setTimeout(processAll, 800);

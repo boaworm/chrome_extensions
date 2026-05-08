@@ -14,25 +14,49 @@ function parseSubscriberCount(text) {
 }
 
 function extractCount(html) {
-  // Try several JSON patterns YouTube uses
-  const patterns = [
+  const subPatterns = [
     /"subscriberCountText":\{"simpleText":"([^"]+)"\}/,
-    /"subscriberCountText":\{"runs":\[\{"text":"([^"]+)"\}/,
     /"subscriberCountText":\{"accessibility":[^}]+,"simpleText":"([^"]+)"\}/,
+    /"subscriberCountText":\{"runs":\[\{"text":"([^"]+)"\}/,
   ];
-  for (const re of patterns) {
-    const m = html.match(re);
-    if (m) {
-      const count = parseSubscriberCount(m[1]);
-      console.log(`[YCF bg] matched pattern, raw="${m[1]}" count=${count}`);
-      if (count !== null) return count;
+
+  // Search within the channel header section to avoid matching recommended channels
+  const headerKeys = ['"c4TabbedHeaderRenderer"', '"pageHeaderRenderer"', '"channelMetadataRenderer"'];
+  for (const key of headerKeys) {
+    const idx = html.indexOf(key);
+    if (idx === -1) continue;
+    const section = html.slice(idx, idx + 5000);
+    for (const re of subPatterns) {
+      const m = section.match(re);
+      if (m) {
+        const count = parseSubscriberCount(m[1]);
+        if (count !== null) {
+          console.log(`[YCF bg] ${key} raw="${m[1]}" count=${count}`);
+          return count;
+        }
+      }
     }
   }
+
+  // Fall back to the largest count found anywhere on the page
+  const allCounts = [];
+  for (const re of subPatterns) {
+    for (const m of html.matchAll(new RegExp(re.source, 'g'))) {
+      const count = parseSubscriberCount(m[1]);
+      if (count !== null) allCounts.push(count);
+    }
+  }
+  if (allCounts.length > 0) {
+    const max = Math.max(...allCounts);
+    console.log(`[YCF bg] all counts ${allCounts}, using max=${max}`);
+    return max;
+  }
+
   // Last resort: any "X subscribers" string in the page
   const fallback = html.match(/([\d,.]+[KMB]?) subscribers/i);
   if (fallback) {
     const count = parseSubscriberCount(fallback[0]);
-    console.log(`[YCF bg] fallback match raw="${fallback[0]}" count=${count}`);
+    console.log(`[YCF bg] fallback raw="${fallback[0]}" count=${count}`);
     return count;
   }
   console.warn('[YCF bg] no subscriber count found in page HTML');
