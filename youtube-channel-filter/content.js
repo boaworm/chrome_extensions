@@ -4,11 +4,14 @@ const PLAYER_OVERLAY_ID = 'ycf-player-overlay';
 
 let subThreshold = 10000;
 let viewThreshold = 50000;
+let removeShorts = true;
 
 async function loadSettings() {
-  const r = await chrome.storage.sync.get({ subThreshold: 10000, viewThreshold: 50000 });
+  const r = await chrome.storage.sync.get({ subThreshold: 10000, viewThreshold: 50000, removeShorts: true });
   subThreshold = r.subThreshold;
   viewThreshold = r.viewThreshold;
+  removeShorts = r.removeShorts;
+  document.documentElement.classList.toggle('ycf-hide-shorts', removeShorts);
 }
 
 const CARD_SELECTOR = [

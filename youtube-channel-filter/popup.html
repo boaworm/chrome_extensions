@@ -49,6 +49,19 @@
       cursor: pointer;
     }
     button:hover { background: #cc0000; }
+    .field-check {
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .field-check label {
+      margin: 0;
+      font-size: 13px;
+      color: #f1f1f1;
+      cursor: pointer;
+    }
+    input[type=checkbox] { cursor: pointer; accent-color: #ff4444; width: 14px; height: 14px; }
     .saved {
       margin-top: 8px;
       font-size: 12px;
@@ -68,6 +81,10 @@
   <div class="field">
     <label for="viewThreshold">Min views per video</label>
     <input type="number" id="viewThreshold" min="0" step="1000">
+  </div>
+  <div class="field-check">
+    <input type="checkbox" id="removeShorts">
+    <label for="removeShorts">Remove Shorts</label>
   </div>
   <button id="save">Save</button>
   <div class="saved" id="saved-msg">Saved — reload YouTube to apply</div>

@@ -1,3 +1,13 @@
+/* Hide Shorts */
+html.ycf-hide-shorts ytd-reel-shelf-renderer,
+html.ycf-hide-shorts ytd-rich-shelf-renderer[is-shorts],
+html.ycf-hide-shorts ytd-reel-item-renderer,
+html.ycf-hide-shorts ytd-rich-item-renderer:has(a[href*="/shorts/"]),
+html.ycf-hide-shorts yt-lockup-view-model:has(a[href*="/shorts/"]),
+html.ycf-hide-shorts ytd-compact-video-renderer:has(a[href*="/shorts/"]) {
+  display: none !important;
+}
+
 /* Overlay on thumbnail cards (feed, search, sidebar) */
 .ycf-overlay {
   position: absolute;
