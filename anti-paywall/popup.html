@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Anti-Paywall</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 16px;
+      width: 220px;
+      background: #0f0f0f;
+      color: #f1f1f1;
+    }
+    h2 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: #ff4444;
+    }
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .toggle label {
+      font-size: 13px;
+      cursor: pointer;
+    }
+    input[type=checkbox] { cursor: pointer; accent-color: #ff4444; width: 14px; height: 14px; }
+    .sites-label {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .sites {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sites li {
+      font-size: 12px;
+      color: #aaa;
+      padding: 4px 8px;
+      background: #1a1a1a;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Anti-Paywall</h2>
+  <div class="toggle">
+    <input type="checkbox" id="enabled">
+    <label for="enabled">Enabled</label>
+  </div>
+  <div class="sites-label">Supported sites</div>
+  <ul class="sites" id="sites"></ul>
+  <script src="popup.js"></script>
+</body>
+</html>

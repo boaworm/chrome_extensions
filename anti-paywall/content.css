@@ -1,0 +1,6 @@
+/* BBC */
+[data-component="sign-in-wall"],
+#sign-in-prompt,
+.sign-in-prompt {
+  display: none !important;
+}
