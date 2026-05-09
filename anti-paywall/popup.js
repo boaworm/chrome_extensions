@@ -1,4 +1,4 @@
-const SUPPORTED_SITES = ['bbc.com'];
+const SUPPORTED_SITES = ['bbc.com', 'cnn.com', 'reuters.com', 'expressen.se'];
 
 const enabledInput = document.getElementById('enabled');
 const sitesList = document.getElementById('sites');

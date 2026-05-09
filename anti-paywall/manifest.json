@@ -1,24 +1,39 @@
 {
   "manifest_version": 3,
   "name": "Anti-Paywall",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Remove sign-up and paywall overlays on news sites.",
   "permissions": ["storage"],
   "host_permissions": [
     "https://*.bbc.com/*",
     "https://*.cnn.com/*",
-    "https://*.reuters.com/*"
+    "https://*.reuters.com/*",
+    "https://*.expressen.se/*"
   ],
   "content_scripts": [
     {
-      "matches": [
-        "https://*.bbc.com/*",
-        "https://*.cnn.com/*",
-        "https://*.reuters.com/*"
-      ],
-      "js": ["content.js"],
-      "css": ["content.css"],
-      "run_at": "document_idle"
+      "matches": ["https://*.bbc.com/*"],
+      "js": ["core.js", "sites/bbc.js"],
+      "css": ["css/bbc.css"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://*.cnn.com/*"],
+      "js": ["core.js", "sites/cnn.js"],
+      "css": ["css/cnn.css"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://*.reuters.com/*"],
+      "js": ["core.js", "sites/reuters.js"],
+      "css": ["css/reuters.css"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://*.expressen.se/*"],
+      "js": ["core.js", "sites/expressen.js"],
+      "css": ["css/expressen.css"],
+      "run_at": "document_start"
     }
   ],
   "action": {

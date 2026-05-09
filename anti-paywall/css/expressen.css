@@ -1,0 +1,6 @@
+#tapet-paywall,
+.bn-tapet,
+.tapet-paywall,
+.paywall-manager__fallback {
+  display: none !important;
+}
