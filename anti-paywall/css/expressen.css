@@ -4,3 +4,10 @@
 .paywall-manager__fallback {
   display: none !important;
 }
+
+/* Premium content removal */
+a.premium-link,
+a.slider__item.premium-link,
+.premium-icon {
+  display: none !important;
+}
