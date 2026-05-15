@@ -13,38 +13,44 @@ function parseSubscriberCount(text) {
   return Math.round(num);
 }
 
-function extractCount(html) {
-  const subPatterns = [
-    /"subscriberCountText":\{"simpleText":"([^"]+)"\}/,
-    /"subscriberCountText":\{"accessibility":[^}]+,"simpleText":"([^"]+)"\}/,
-    /"subscriberCountText":\{"runs":\[\{"text":"([^"]+)"\}/,
-  ];
+function findSimpleTextNear(html, fromIndex) {
+  // Look for "simpleText":"..." within 400 chars of fromIndex
+  const slice = html.slice(fromIndex, fromIndex + 400);
+  const m = slice.match(/"simpleText":"([^"]+)"/);
+  return m ? m[1] : null;
+}
 
-  // Search within the channel header section to avoid matching recommended channels
+function extractCount(html) {
+  // Prefer the channel header sections to avoid picking up sidebar recommendations
   const headerKeys = ['"c4TabbedHeaderRenderer"', '"pageHeaderRenderer"', '"channelMetadataRenderer"'];
   for (const key of headerKeys) {
-    const idx = html.indexOf(key);
-    if (idx === -1) continue;
-    const section = html.slice(idx, idx + 5000);
-    for (const re of subPatterns) {
-      const m = section.match(re);
-      if (m) {
-        const count = parseSubscriberCount(m[1]);
-        if (count !== null) {
-          console.log(`[YCF bg] ${key} raw="${m[1]}" count=${count}`);
-          return count;
-        }
+    const keyIdx = html.indexOf(key);
+    if (keyIdx === -1) continue;
+    const section = html.slice(keyIdx, keyIdx + 8000);
+    const subIdx = section.indexOf('"subscriberCountText"');
+    if (subIdx === -1) continue;
+    const raw = findSimpleTextNear(section, subIdx);
+    if (raw) {
+      const count = parseSubscriberCount(raw);
+      if (count !== null) {
+        console.log(`[YCF bg] ${key} raw="${raw}" count=${count}`);
+        return count;
       }
     }
   }
 
-  // Fall back to the largest count found anywhere on the page
+  // Fall back to all occurrences, take the largest
   const allCounts = [];
-  for (const re of subPatterns) {
-    for (const m of html.matchAll(new RegExp(re.source, 'g'))) {
-      const count = parseSubscriberCount(m[1]);
+  let pos = 0;
+  while (true) {
+    const subIdx = html.indexOf('"subscriberCountText"', pos);
+    if (subIdx === -1) break;
+    const raw = findSimpleTextNear(html, subIdx);
+    if (raw) {
+      const count = parseSubscriberCount(raw);
       if (count !== null) allCounts.push(count);
     }
+    pos = subIdx + 1;
   }
   if (allCounts.length > 0) {
     const max = Math.max(...allCounts);

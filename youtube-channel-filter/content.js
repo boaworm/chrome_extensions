@@ -6,6 +6,8 @@ let subThreshold = 10000;
 let viewThreshold = 50000;
 let removeShorts = true;
 let watchPageDismissed = false;
+let watchPageVersion = 0;
+let lastWatchVideoUrl = null;
 
 async function loadSettings() {
   const r = await chrome.storage.sync.get({ subThreshold: 10000, viewThreshold: 50000, removeShorts: true });
@@ -73,6 +75,14 @@ function getWatchPageViewCount() {
   return m ? parseCount(m[1]) : null;
 }
 
+// Extract subscriber count directly from the watch page DOM (already rendered by YouTube)
+function getWatchPageSubCount() {
+  const ownerEl = document.querySelector('#owner, ytd-video-owner-renderer');
+  if (!ownerEl) return null;
+  const m = ownerEl.textContent.match(/([\d,.]+[KMBkmb]?)\s+subscribers?/i);
+  return m ? parseCount(m[1]) : null;
+}
+
 // --- Lookup URL for subscriber count ---
 
 function getChannelUrlFromPolymer(card) {
@@ -96,14 +106,13 @@ function getChannelUrlFromPolymer(card) {
 }
 
 function getLookupUrl(card) {
-  if (card.tagName === 'YT-LOCKUP-VIEW-MODEL') {
-    const a = card.querySelector('a[href*="/watch?v="]');
-    return normalizeVideoUrl(a?.href);
-  }
   const polymer = getChannelUrlFromPolymer(card);
   if (polymer) return polymer;
-  const a = card.querySelector('ytd-channel-name a, #channel-name a');
-  return normalizeChannelUrl(a?.href);
+  const channelAnchor = card.querySelector(
+    'ytd-channel-name a, #channel-name a, a[href^="/@"], a[href^="/channel/"], a[href^="/user/"]'
+  );
+  if (channelAnchor) return normalizeChannelUrl(channelAnchor.href);
+  return null;
 }
 
 // --- Overlays ---
@@ -204,36 +213,29 @@ async function processCard(card) {
   }
 }
 
-async function processWatchPage() {
-  if (window.location.pathname !== '/watch') { removePlayerOverlay(); return; }
+function processWatchPage() {
+  if (window.location.pathname !== '/watch') { removePlayerOverlay(); lastWatchVideoUrl = null; return; }
   if (watchPageDismissed) return;
 
-  let channelLink = null;
-  for (const sel of WATCH_CHANNEL_SELECTORS) {
-    channelLink = document.querySelector(sel);
-    if (channelLink) break;
-  }
-  if (!channelLink) return;
+  const videoUrl = window.location.href;
+  if (videoUrl === lastWatchVideoUrl) return;
 
-  const channelUrl = normalizeChannelUrl(channelLink.href);
-  if (!channelUrl) return;
-
-  let subCount = null;
-  try {
-    const resp = await chrome.runtime.sendMessage({ type: 'GET_SUBSCRIBER_COUNT', channelUrl });
-    subCount = resp?.count ?? null;
-  } catch (e) {
-    console.warn('[YCF] sendMessage failed', e);
-  }
-
+  const subCount = getWatchPageSubCount();
   const viewCount = getWatchPageViewCount();
+
+  // DOM not ready yet — MutationObserver will retry when content loads
+  if (subCount === null) return;
+
+  lastWatchVideoUrl = videoUrl;
+
   const failing = [];
   const viewsFailing = viewCount !== null && viewCount < viewThreshold;
-  const subsFailing = subCount !== null && subCount < subThreshold;
+  const subsFailing = subCount < subThreshold;
   if (viewsFailing && subsFailing) { failing.push('Too few views'); failing.push('Too few subscribers'); }
   else if (subsFailing) failing.push('Too few subscribers');
 
-  console.log(`[YCF] watch views=${viewCount} subs=${subCount} failing=${failing}`);
+  const title = document.querySelector('h1.ytd-watch-metadata, h1[class*="title"] yt-formatted-string')?.textContent?.trim() ?? '?';
+  console.log(`[YCF] [${title}] views=${viewCount} subs=${subCount} failing=${failing}`);
 
   if (failing.length > 0) {
     applyPlayerOverlay(failing);
