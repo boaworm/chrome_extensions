@@ -7,7 +7,7 @@ let viewThreshold = 50000;
 let removeShorts = true;
 let watchPageDismissed = false;
 let watchPageVersion = 0;
-let lastWatchVideoUrl = null;
+let lastWatchKey = null;
 
 async function loadSettings() {
   const r = await chrome.storage.sync.get({ subThreshold: 10000, viewThreshold: 50000, removeShorts: true });
@@ -75,11 +75,18 @@ function getWatchPageViewCount() {
   return m ? parseCount(m[1]) : null;
 }
 
-// Extract subscriber count directly from the watch page DOM (already rendered by YouTube)
+// Extract subscriber count from the watch page DOM (already rendered by YouTube).
+// Only reads the metadata block of the current video: YouTube is an SPA and keeps
+// stale/hidden owner elements around, so a bare '#owner' query can return the
+// previous video's channel.
 function getWatchPageSubCount() {
-  const ownerEl = document.querySelector('#owner, ytd-video-owner-renderer');
+  const videoId = new URLSearchParams(window.location.search).get('v');
+  const flexy = document.querySelector('ytd-watch-flexy');
+  if (!flexy || !videoId || flexy.getAttribute('video-id') !== videoId) return null;
+  const ownerEl = flexy.querySelector('ytd-watch-metadata #owner');
   if (!ownerEl) return null;
-  const m = ownerEl.textContent.match(/([\d,.]+[KMBkmb]?)\s+subscribers?/i);
+  const subEl = ownerEl.querySelector('#owner-sub-count') || ownerEl;
+  const m = subEl.textContent.match(/([\d,.]+[KMBkmb]?)\s+subscribers?/i);
   return m ? parseCount(m[1]) : null;
 }
 
@@ -214,11 +221,8 @@ async function processCard(card) {
 }
 
 function processWatchPage() {
-  if (window.location.pathname !== '/watch') { removePlayerOverlay(); lastWatchVideoUrl = null; return; }
+  if (window.location.pathname !== '/watch') { removePlayerOverlay(); lastWatchKey = null; return; }
   if (watchPageDismissed) return;
-
-  const videoUrl = window.location.href;
-  if (videoUrl === lastWatchVideoUrl) return;
 
   const subCount = getWatchPageSubCount();
   const viewCount = getWatchPageViewCount();
@@ -226,7 +230,12 @@ function processWatchPage() {
   // DOM not ready yet — MutationObserver will retry when content loads
   if (subCount === null) return;
 
-  lastWatchVideoUrl = videoUrl;
+  // Re-evaluate whenever the video or the counts change (e.g. the owner block
+  // finishes updating after an SPA navigation), but do nothing if unchanged so
+  // we don't loop on our own DOM mutations.
+  const key = `${window.location.href}|${subCount}|${viewCount}`;
+  if (key === lastWatchKey) return;
+  lastWatchKey = key;
 
   const failing = [];
   const viewsFailing = viewCount !== null && viewCount < viewThreshold;

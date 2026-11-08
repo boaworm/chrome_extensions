@@ -13,24 +13,32 @@ function parseSubscriberCount(text) {
   return Math.round(num);
 }
 
-function findSimpleTextNear(html, fromIndex) {
-  // Look for "simpleText":"..." within 400 chars of fromIndex
-  const slice = html.slice(fromIndex, fromIndex + 400);
-  const m = slice.match(/"simpleText":"([^"]+)"/);
-  return m ? m[1] : null;
+// Find a subscriber string inside a header section. YouTube has used several shapes:
+//   "subscriberCountText":{..."simpleText":"15.3M subscribers"}   (c4TabbedHeaderRenderer)
+//   "metadataParts":[...{"text":{"content":"15.3M subscribers"}}]  (pageHeaderRenderer)
+function findSubscriberTextInSection(section) {
+  const patterns = [
+    /"subscriberCountText":\{[^}]*?"simpleText":"([^"]+)"/,
+    /"subscriberCountText":\{"accessibility":\{"accessibilityData":\{"label":"[^"]*"\}\},"simpleText":"([^"]+)"/,
+    /"content":"([^"]*?subscribers?)"/i,
+  ];
+  for (const re of patterns) {
+    const m = section.match(re);
+    if (m) return m[1];
+  }
+  return null;
 }
 
 function extractCount(html) {
-  // Prefer the channel header sections to avoid picking up sidebar recommendations
-  const headerKeys = ['"c4TabbedHeaderRenderer"', '"pageHeaderRenderer"', '"channelMetadataRenderer"'];
+  // Only trust the channel's own header. Other "subscribers" strings on the page
+  // belong to recommended/featured channels and must not be used.
+  const headerKeys = ['"c4TabbedHeaderRenderer"', '"pageHeaderRenderer"'];
   for (const key of headerKeys) {
-    const keyIdx = html.indexOf(key);
-    if (keyIdx === -1) continue;
-    const section = html.slice(keyIdx, keyIdx + 8000);
-    const subIdx = section.indexOf('"subscriberCountText"');
-    if (subIdx === -1) continue;
-    const raw = findSimpleTextNear(section, subIdx);
-    if (raw) {
+    let keyIdx = -1;
+    while ((keyIdx = html.indexOf(key, keyIdx + 1)) !== -1) {
+      const section = html.slice(keyIdx, keyIdx + 8000);
+      const raw = findSubscriberTextInSection(section);
+      if (!raw) continue;
       const count = parseSubscriberCount(raw);
       if (count !== null) {
         console.log(`[YCF bg] ${key} raw="${raw}" count=${count}`);
@@ -38,34 +46,7 @@ function extractCount(html) {
       }
     }
   }
-
-  // Fall back to all occurrences, take the largest
-  const allCounts = [];
-  let pos = 0;
-  while (true) {
-    const subIdx = html.indexOf('"subscriberCountText"', pos);
-    if (subIdx === -1) break;
-    const raw = findSimpleTextNear(html, subIdx);
-    if (raw) {
-      const count = parseSubscriberCount(raw);
-      if (count !== null) allCounts.push(count);
-    }
-    pos = subIdx + 1;
-  }
-  if (allCounts.length > 0) {
-    const max = Math.max(...allCounts);
-    console.log(`[YCF bg] all counts ${allCounts}, using max=${max}`);
-    return max;
-  }
-
-  // Last resort: any "X subscribers" string in the page
-  const fallback = html.match(/([\d,.]+[KMB]?) subscribers/i);
-  if (fallback) {
-    const count = parseSubscriberCount(fallback[0]);
-    console.log(`[YCF bg] fallback raw="${fallback[0]}" count=${count}`);
-    return count;
-  }
-  console.warn('[YCF bg] no subscriber count found in page HTML');
+  console.warn('[YCF bg] no subscriber count found in channel header');
   return null;
 }
 
