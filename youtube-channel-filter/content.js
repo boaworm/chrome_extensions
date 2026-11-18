@@ -248,32 +248,6 @@ function setBadgeTier(badge, count) {
   if (badge.className !== cls) badge.className = cls;
 }
 
-// DEBUG: compact text dump of a card's element tree (tag, classes, notable
-// attributes, visibility, own text) for diagnosing badge placement failures.
-function dumpStructure(root, maxLines = 400) {
-  const lines = [];
-  const walk = (el, depth) => {
-    if (lines.length >= maxLines) return;
-    const tag = el.tagName.toLowerCase();
-    const cls = typeof el.className === 'string' && el.className.trim()
-      ? '.' + el.className.trim().split(/\s+/).join('.') : '';
-    const attrs = ['id', 'aria-label', 'href', 'hidden', 'title']
-      .filter(a => el.hasAttribute(a))
-      .map(a => `${a}="${(el.getAttribute(a) || '').slice(0, 80)}"`)
-      .join(' ');
-    const ownText = [...el.childNodes]
-      .filter(n => n.nodeType === Node.TEXT_NODE)
-      .map(n => n.textContent.trim()).filter(Boolean).join(' ').slice(0, 80);
-    const vis = el.getClientRects().length > 0 ? '' : ' [not-rendered]';
-    lines.push(`${'  '.repeat(depth)}<${tag}${cls}${attrs ? ' ' + attrs : ''}>${vis}${ownText ? ` "${ownText}"` : ''}`);
-    if (tag === 'svg') return; // icon internals are noise
-    for (const child of el.children) walk(child, depth + 1);
-  };
-  walk(root, 0);
-  if (lines.length >= maxLines) lines.push(`... truncated at ${maxLines} lines`);
-  return lines.join('\n');
-}
-
 function applySubBadge(card, count) {
   const text = `[${formatCount(count)} sub]`;
   const existing = card.querySelector(`.${BADGE_CLASS}`);
@@ -285,7 +259,6 @@ function applySubBadge(card, count) {
   const placement = getBadgePlacement(card);
   if (!placement) {
     console.warn('[YCF] no place for sub badge on card', card.tagName, card);
-    console.log('[YCF DEBUG] card structure:\n' + dumpStructure(card));
     return;
   }
   const badge = document.createElement('span');
@@ -304,15 +277,7 @@ async function processCard(card) {
   if (card.querySelector('a[href*="list="]')) return;
 
   const lookupUrl = getLookupUrl(card);
-  if (!lookupUrl) {
-    // DEBUG: log once per video why this card gets no badge.
-    const href = card.querySelector('a[href*="/watch"]')?.getAttribute('href') || '(no watch link)';
-    if (card.dataset.ycfDebugged !== href) {
-      card.dataset.ycfDebugged = href;
-      console.log(`[YCF DEBUG] no channel URL for card ${card.tagName} ${href}\n` + dumpStructure(card, 150));
-    }
-    return;
-  }
+  if (!lookupUrl) return;
 
   // Already processed for this channel + threshold. YouTube recycles card
   // elements, so the key includes the channel URL. Re-insert the badge if
@@ -422,25 +387,6 @@ window.addEventListener('yt-navigate-finish', async () => {
   setTimeout(processAll, 800);
   setTimeout(processAll, 2000);
 });
-
-// DEBUG: every 3s, log (once per video) any visible card that has no badge,
-// with the state processCard left it in. Catches the silent paths.
-const auditLogged = new Set();
-setInterval(() => {
-  const seen = new Set();
-  document.querySelectorAll('ytd-rich-item-renderer, ' + CARD_SELECTOR).forEach(el => {
-    const card = el.closest('ytd-rich-item-renderer') || el;
-    if (seen.has(card)) return;
-    seen.add(card);
-    if (!isVisible(card) || card.querySelector(`.${BADGE_CLASS}`)) return;
-    const href = card.querySelector('a[href*="/watch"]')?.getAttribute('href');
-    if (!href || auditLogged.has(href)) return;
-    auditLogged.add(href);
-    const inner = card.querySelector(CARD_SELECTOR);
-    const state = c => c ? `<${c.tagName.toLowerCase()} matchesSelector=${c.matches(CARD_SELECTOR)} ycf="${c.getAttribute(ATTR)}" subs="${c.dataset.ycfSubs ?? ''}" channel="${c.getAttribute('data-ycf-channel') ?? ''}">` : '(none)';
-    console.log(`[YCF DEBUG] card without badge ${href}\n  outer: ${state(card)}\n  inner: ${state(inner)}\n  lookupUrl: ${getLookupUrl(card)}\n` + dumpStructure(card, 150));
-  });
-}, 3000);
 
 async function init() {
   await loadSettings();
