@@ -74,3 +74,13 @@ html.ycf-hide-shorts ytd-compact-video-renderer:has(a[href*="/shorts/"]) {
   border-color: #fff;
   color: #fff;
 }
+
+/* Subscriber count badge next to channel name on cards */
+.ycf-sub-badge {
+  display: inline-block;
+  margin: 0 4px;
+  font-size: inherit;
+  color: var(--yt-spec-text-secondary, #aaa);
+  white-space: nowrap;
+  flex-shrink: 0;
+}

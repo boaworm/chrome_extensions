@@ -1,6 +1,7 @@
 const ATTR = 'data-ycf';
 const OVERLAY_CLASS = 'ycf-overlay';
 const PLAYER_OVERLAY_ID = 'ycf-player-overlay';
+const BADGE_CLASS = 'ycf-sub-badge';
 
 let subThreshold = 10000;
 let viewThreshold = 50000;
@@ -113,6 +114,10 @@ function getChannelUrlFromPolymer(card) {
 }
 
 function getLookupUrl(card) {
+  // Set by page-world.js for new-style lockup cards, which have no channel link.
+  const tagged = card.getAttribute('data-ycf-channel') ||
+    card.querySelector('[data-ycf-channel]')?.getAttribute('data-ycf-channel');
+  if (tagged) return tagged;
   const polymer = getChannelUrlFromPolymer(card);
   if (polymer) return polymer;
   const channelAnchor = card.querySelector(
@@ -180,14 +185,92 @@ function removePlayerOverlay() {
   document.getElementById(PLAYER_OVERLAY_ID)?.remove();
 }
 
+// --- Subscriber badge next to channel name ---
+
+function formatCount(n) {
+  if (n >= 1_000_000_000) return +(n / 1_000_000_000).toFixed(2) + 'B';
+  if (n >= 1_000_000) return +(n / 1_000_000).toFixed(2) + 'M';
+  if (n >= 1_000) return +(n / 1_000).toFixed(1) + 'K';
+  return String(n);
+}
+
+function isVisible(el) {
+  return el.getClientRects().length > 0 && !el.closest('[hidden]');
+}
+
+// Returns { el, where } describing where to insert the badge, or null.
+// Tries, in order: visible channel-name element, first part of the first
+// metadata row (new lockup cards), and finally right before the "N views" text.
+function getBadgePlacement(card) {
+  for (const el of card.querySelectorAll('ytd-channel-name')) {
+    if (isVisible(el)) return { el, where: 'afterend' };
+  }
+  // New lockup cards: "Channel ✓ · ▶ 1k · 2 hr ago" in one metadata row.
+  // Put the badge before the delimiter that precedes the views part, i.e. right
+  // after the channel name(s) and verified icon.
+  const row = card.querySelector('.ytContentMetadataViewModelMetadataRow, [class*="metadata-row"]');
+  if (row && isVisible(row)) {
+    const views = row.querySelector('[aria-label$=" views"], [aria-label$=" view"]');
+    if (views) {
+      let el = views;
+      while (el.previousElementSibling && !/Delimiter/i.test(el.previousElementSibling.className)) {
+        el = el.previousElementSibling;
+      }
+      const delim = el.previousElementSibling;
+      return delim ? { el: delim, where: 'beforebegin' } : { el, where: 'beforebegin' };
+    }
+    const first = row.querySelector('.ytContentMetadataViewModelMetadataText, [class*="metadata-text"]');
+    if (first) {
+      const next = first.nextElementSibling;
+      const afterIcon = next && /Icon/.test(next.className) && !/LeadingIcon/.test(next.className);
+      return { el: afterIcon ? next : first, where: 'afterend' };
+    }
+  }
+  for (const el of card.querySelectorAll('span, div, yt-formatted-string')) {
+    if (el.children.length === 0 && /^\s*[\d,.]+\s*[KMB]?\s+views?\s*$/i.test(el.textContent) && isVisible(el)) {
+      return { el, where: 'beforebegin' };
+    }
+  }
+  return null;
+}
+
+function applySubBadge(card, count) {
+  const text = `[${formatCount(count)} sub]`;
+  const existing = card.querySelector(`.${BADGE_CLASS}`);
+  if (existing) {
+    if (existing.textContent !== text) existing.textContent = text;
+    return;
+  }
+  const placement = getBadgePlacement(card);
+  if (!placement) {
+    console.warn('[YCF] no place for sub badge on card', card.tagName, card);
+    return;
+  }
+  const badge = document.createElement('span');
+  badge.className = BADGE_CLASS;
+  badge.textContent = text;
+  placement.el.insertAdjacentElement(placement.where, badge);
+  console.log(`[YCF] badge ${text} placed ${placement.where} <${placement.el.tagName.toLowerCase()} class="${placement.el.className}">`);
+}
+
 // --- Processing ---
 
 async function processCard(card) {
   const current = card.getAttribute(ATTR);
-  if (current === 'pending' || current === String(subThreshold)) return;
+  if (current === 'pending') return;
 
   const lookupUrl = getLookupUrl(card);
   if (!lookupUrl) return;
+
+  // Already processed for this channel + threshold. YouTube recycles card
+  // elements, so the key includes the channel URL. Re-insert the badge if
+  // YouTube re-rendered the metadata and dropped it.
+  const doneKey = `${subThreshold}|${lookupUrl}`;
+  if (current === doneKey) {
+    const known = card.dataset.ycfSubs;
+    if (known) applySubBadge(card, Number(known));
+    return;
+  }
 
   card.setAttribute(ATTR, 'pending');
 
@@ -199,7 +282,14 @@ async function processCard(card) {
     console.warn('[YCF] sendMessage failed', e);
   }
 
-  card.setAttribute(ATTR, String(subThreshold));
+  card.setAttribute(ATTR, doneKey);
+  if (subCount !== null) {
+    card.dataset.ycfSubs = String(subCount);
+    applySubBadge(card, subCount);
+  } else {
+    delete card.dataset.ycfSubs;
+    card.querySelector(`.${BADGE_CLASS}`)?.remove();
+  }
 
   const viewCount = getViewCountFromCard(card);
   const failing = [];
@@ -284,7 +374,10 @@ window.addEventListener('yt-navigate-finish', async () => {
 async function init() {
   await loadSettings();
   processAll();
-  observer.observe(document.body, { childList: true, subtree: true });
+  observer.observe(document.body, {
+    childList: true, subtree: true,
+    attributes: true, attributeFilter: ['data-ycf-channel'],
+  });
 }
 
 init();

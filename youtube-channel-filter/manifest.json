@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Channel Filter",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Overlay videos from channels with too few subscribers.",
   "permissions": ["storage"],
   "host_permissions": ["https://www.youtube.com/*"],
@@ -11,6 +11,12 @@
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["page-world.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
     }
   ],
   "background": {
