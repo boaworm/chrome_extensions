@@ -8,6 +8,19 @@ html.ycf-hide-shorts ytd-compact-video-renderer:has(a[href*="/shorts/"]) {
   display: none !important;
 }
 
+/* Hide playlists and mixes (links carrying a list= parameter). They have no
+   single channel, so there is no subscriber count to show. */
+ytd-rich-item-renderer:has(a[href*="list="]),
+yt-lockup-view-model:has(a[href*="list="]),
+ytd-compact-video-renderer:has(a[href*="list="]),
+ytd-video-renderer:has(a[href*="list="]),
+ytd-radio-renderer,
+ytd-playlist-renderer,
+ytd-compact-radio-renderer,
+ytd-compact-playlist-renderer {
+  display: none !important;
+}
+
 /* Overlay on thumbnail cards (feed, search, sidebar) */
 .ycf-overlay {
   position: absolute;
