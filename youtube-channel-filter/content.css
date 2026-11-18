@@ -84,3 +84,7 @@ html.ycf-hide-shorts ytd-compact-video-renderer:has(a[href*="/shorts/"]) {
   white-space: nowrap;
   flex-shrink: 0;
 }
+.ycf-sub-badge.ycf-sub-red    { color: #e53935; font-weight: 600; }
+.ycf-sub-badge.ycf-sub-orange { color: #fb8c00; font-weight: 600; }
+.ycf-sub-badge.ycf-sub-yellow { color: #f2b705; font-weight: 600; }
+.ycf-sub-badge.ycf-sub-green  { color: #43a047; font-weight: 600; }

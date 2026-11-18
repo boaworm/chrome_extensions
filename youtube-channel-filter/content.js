@@ -234,11 +234,26 @@ function getBadgePlacement(card) {
   return null;
 }
 
+// Color tier for the badge.
+function subTier(count) {
+  if (count < 10_000) return 'red';
+  if (count < 100_000) return 'orange';
+  if (count < 1_000_000) return 'yellow';
+  return 'green';
+}
+
+function setBadgeTier(badge, count) {
+  const tier = subTier(count);
+  const cls = tier ? `${BADGE_CLASS} ycf-sub-${tier}` : BADGE_CLASS;
+  if (badge.className !== cls) badge.className = cls;
+}
+
 function applySubBadge(card, count) {
   const text = `[${formatCount(count)} sub]`;
   const existing = card.querySelector(`.${BADGE_CLASS}`);
   if (existing) {
     if (existing.textContent !== text) existing.textContent = text;
+    setBadgeTier(existing, count);
     return;
   }
   const placement = getBadgePlacement(card);
@@ -247,7 +262,7 @@ function applySubBadge(card, count) {
     return;
   }
   const badge = document.createElement('span');
-  badge.className = BADGE_CLASS;
+  setBadgeTier(badge, count);
   badge.textContent = text;
   placement.el.insertAdjacentElement(placement.where, badge);
   console.log(`[YCF] badge ${text} placed ${placement.where} <${placement.el.tagName.toLowerCase()} class="${placement.el.className}">`);
